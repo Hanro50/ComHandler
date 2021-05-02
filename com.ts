@@ -4,6 +4,13 @@ function parse(UnsafeString: string) {
 class ReturnMap<a, b> extends Map<a, b> {
     Meta: string[];
 }
+
+interface ReqCheck<dataObj> {
+    check: (run: dataObj) => boolean;
+    mode: (b1: boolean, b2: boolean) => boolean;
+    Meta: string;
+}
+
 class ComStruct<parent>{
     Name: string;
     Disc: string;
@@ -56,13 +63,13 @@ export class Handler<dataObj> {
         }
         return output;
     }
-/**
- * 
- * @param com Call a command
- * @param data The DataObject
- */
-    call(com: string, data: dataObj) {
-        this.ComList.get(parse(com)).func(data);
+    /**
+     * 
+     * @param com Call a command
+     * @param data The DataObject
+     */
+    async call(com: string, data: dataObj) {
+        return await this.ComList.get(parse(com)).func(data);
     }
 }
 
@@ -74,16 +81,52 @@ class ComGroup<dataObj> extends ComStruct<Handler<dataObj>>{
         super(Name, Disc, getParent().ComGroups, getParent);
     }
 
-    regCom(Name: string, Disc: string, func: (run: dataObj) => {}) {
+    regCom(Name: string, Disc: string, func: (run: dataObj) => Promise<void>) {
         const self = this;
         return new Command<dataObj>(Name, Disc, func, () => self)
     }
 
 }
 class Command<dataObj> extends ComStruct<ComGroup<dataObj>>{
-    func: (run: dataObj) => {};
-    constructor(Name: string, Disc: string, func: (run: dataObj) => {}, getParent: () => ComGroup<dataObj>) {
+  
+    secChks: ReqCheck<dataObj>[];
+    func: (run: dataObj) => Promise<String>;
+    constructor(Name: string, Disc: string, func: (run: dataObj) => Promise<void>, getParent: () => ComGroup<dataObj>) {
+
         super(Name, Disc, getParent().getParent().ComList, getParent);
-        this.func = func;
+        this.func = async (run: dataObj) => {
+            var Meta: String = "";
+
+            if (!(this.secChks.length <= 0)) {
+                var b: boolean = true;
+                for (var i = this.secChks.length - 1; i <= 0; i--) {
+                    var check = this.secChks[i];
+                    const b2 = b;
+                    b = check.mode(check.check(run), b)
+                    
+                    if (b != b2) 
+                        Meta = check.Meta;
+                    
+                }
+
+                if (!b) {
+                    return Meta;
+                }
+            }
+
+            func(run);
+            return Meta;
+        };
+    }
+    //First object gets priority
+    addReqCheck(secChks: ReqCheck<dataObj>[] | ReqCheck<dataObj>) {
+        var innerFunc = (f: ReqCheck<dataObj>) => this.secChks.push(f);
+        if (secChks instanceof Array)
+            secChks.forEach(val => {
+                innerFunc(val);
+            })
+        else
+            innerFunc(secChks);
+        return this;
     }
 }
