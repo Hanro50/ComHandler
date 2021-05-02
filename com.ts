@@ -4,7 +4,7 @@ function parse(UnsafeString: string) {
 class ReturnMap<a, b> extends Map<a, b> {
     Meta: string[];
 }
-class comstruct<parent>{
+class ComStruct<parent>{
     Name: string;
     Disc: string;
     getParent: () => parent;
@@ -18,7 +18,7 @@ class comstruct<parent>{
     }
 }
 export class Handler<dataObj> {
-    ComList: Map<String, command<dataObj>> = new Map();
+    ComList: Map<String, Command<dataObj>> = new Map();
     ComGroups: Map<String, ComGroup<dataObj>> = new Map();
 
     constructor() {
@@ -68,19 +68,19 @@ export class Handler<dataObj> {
 
 
 
-class ComGroup<dataObj> extends comstruct<Handler<dataObj>>{
+class ComGroup<dataObj> extends ComStruct<Handler<dataObj>>{
 
     constructor(Name: string, Disc: string, getParent: () => Handler<dataObj>) {
         super(Name, Disc, getParent().ComGroups, getParent);
     }
 
-    regCommand(Name: string, Disc: string, func: (run: dataObj) => {}) {
+    regCom(Name: string, Disc: string, func: (run: dataObj) => {}) {
         const self = this;
-        return new command<dataObj>(Name, Disc, func, () => self)
+        return new Command<dataObj>(Name, Disc, func, () => self)
     }
 
 }
-class command<dataObj> extends comstruct<ComGroup<dataObj>>{
+class Command<dataObj> extends ComStruct<ComGroup<dataObj>>{
     func: (run: dataObj) => {};
     constructor(Name: string, Disc: string, func: (run: dataObj) => {}, getParent: () => ComGroup<dataObj>) {
         super(Name, Disc, getParent().getParent().ComList, getParent);
